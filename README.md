@@ -7,3 +7,6 @@ this thing
 - data will be used for training hydraea model
 - please use and send me data.flop
 - afaik there shouldn't be any security degradations by using n grams up to quadrams to train a keyboard(i.e password showing up)
+
+
+THIS PROJECT IS NOT MALICIOUS I WANT TO MAKE COOL KEYBOARD LAYOUT 
