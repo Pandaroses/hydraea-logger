@@ -8,5 +8,11 @@ this thing
 - please use and send me data.flop
 - afaik there shouldn't be any security degradations by using n grams up to quadrams to train a keyboard(i.e password showing up)
 
+## Usage Instructions
+- specify data log path in the constant variable 
+- carbo build --release
+- put file in /usr/bin
+- run whenever feel like / startup script
+
 
 THIS PROJECT IS NOT MALICIOUS I WANT TO MAKE COOL KEYBOARD LAYOUT 
