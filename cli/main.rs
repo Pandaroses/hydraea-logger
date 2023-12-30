@@ -13,7 +13,6 @@ struct LogFile {
 
 fn main() {
     let path = env::args().nth(1).unwrap();
-    println!("{}", path);
     let mut file = OpenOptions::new()
         .read(true) // Allow reading if the file exists
         .write(true) // Allow writing to either create or modify
@@ -45,7 +44,7 @@ fn main() {
     let mut meow: Vec<_> = load.quadrams.iter().collect();
     meow.sort_by_key(|k| k.1);
     meow.reverse();
-    println!("most common bigrams");
+    println!("most common quadrams");
     for i in 0..10 {
         println!("{:?}", meow[i]);
     }

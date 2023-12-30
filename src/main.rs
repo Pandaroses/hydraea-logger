@@ -2,17 +2,18 @@
 use input::event::keyboard::KeyboardEventTrait;
 use input::event::tablet_pad::KeyState;
 use input::{Event, Libinput, LibinputInterface};
-use libc::{O_RDONLY, O_RDWR, O_WRONLY};
+use libc::{epoll_wait, fseek, FILE, O_RDONLY, O_RDWR, O_WRONLY};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{Read, Seek, Write};
+use std::os::fd::{AsFd, AsRawFd, FromRawFd};
 use std::os::unix::{fs::OpenOptionsExt, io::OwnedFd};
 use std::path::Path;
 
 struct Interface;
 
-const FILEPATH: &str = "data.flop";
+const FILEPATH: &str = "/home/gsh/data.flop";
 
 impl LibinputInterface for Interface {
     fn open_restricted(&mut self, path: &Path, flags: i32) -> Result<OwnedFd, i32> {
@@ -29,7 +30,7 @@ impl LibinputInterface for Interface {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Debug)]
 struct LogFile {
     bigrams: HashMap<(u32, u32), u32>,
     trigrams: HashMap<(u32, u32, u32), u32>,
@@ -50,14 +51,12 @@ fn calculate(buf: [u32; 1024]) {
         .read(true)
         .write(true)
         .create(true)
+        .append(false)
         .open(FILEPATH)
         .unwrap();
     let mut output = vec![];
     file.read_to_end(&mut output).unwrap();
-    let mut load: LogFile = match bincode::deserialize(&output) {
-        Ok(e) => e,
-        Err(_) => LogFile::default(),
-    };
+    let mut load: LogFile = bincode::deserialize(&output).unwrap_or_default();
 
     bigrams
         .iter()
@@ -69,6 +68,8 @@ fn calculate(buf: [u32; 1024]) {
         .iter()
         .for_each(|i| *load.quadrams.entry((*i.0, *i.1, *i.2, *i.3)).or_insert(1) += 1);
 
+    file.seek(std::io::SeekFrom::Start(0)).unwrap();
+    file.set_len(0).unwrap();
     let writer = bincode::serialize(&load).unwrap();
     file.write_all(&writer).unwrap();
 }
@@ -79,8 +80,15 @@ fn main() {
     let mut buf: [u32; 1024] = [0; 1024];
     let mut count = 0;
     let mut input = Libinput::new_with_udev(Interface);
+    let input_fd = input.as_raw_fd();
+    let input_file = unsafe { File::from_raw_fd(input_fd) };
+    let mut fds = [nix::poll::PollFd::new(
+        &input_file,
+        nix::poll::PollFlags::POLLIN,
+    )];
     input.udev_assign_seat("seat0").unwrap();
     loop {
+        nix::poll::poll(&mut fds, 1000).unwrap();
         input.dispatch().unwrap();
         for event in &mut input {
             match event {
@@ -122,7 +130,7 @@ fn main() {
                                         26 => buf[count] = 667,
                                         //MACRO KEY 13 = }
                                         27 => buf[count] = 668,
-                                        //MACRO KEY 14 = |
+                                        //MACRO KEY 1024 = |
                                         43 => buf[count] = 669,
                                         //MACRO KEY 15 = :
                                         39 => buf[count] = 670,
